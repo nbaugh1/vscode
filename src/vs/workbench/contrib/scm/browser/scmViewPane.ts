@@ -1306,12 +1306,21 @@ class SCMInputWidget extends Disposable {
 		this.repositoryDisposables.add(onEnter(() => textModel.detectIndentation(opts.insertSpaces, opts.tabSize)));
 
 		// Keep model in sync with API
-		textModel.setValue(input.value);
+		let textValue = input.value;
+		let storedValue = this.storageService.get(`scm.text`, StorageScope.WORKSPACE);
+
+		if (storedValue && textValue === '') {
+			textModel.setValue(storedValue);
+		} else {
+			textModel.setValue(textValue);
+		}
+
 		this.repositoryDisposables.add(input.onDidChange(value => {
 			if (value === textModel.getValue()) { // circuit breaker
+				this.storageService.store(`scm.text`, input.value, StorageScope.WORKSPACE);
+				textModel.setValue(value);
 				return;
 			}
-			textModel.setValue(value);
 			this.inputEditor.setPosition(textModel.getFullModelRange().getEndPosition());
 		}));
 
@@ -1382,6 +1391,7 @@ class SCMInputWidget extends Disposable {
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IContextViewService private readonly contextViewService: IContextViewService,
+		@IStorageService private storageService: IStorageService
 	) {
 		super();
 
@@ -1441,6 +1451,8 @@ class SCMInputWidget extends Disposable {
 		this._register(onInputFontFamilyChanged(() => this.inputEditor.updateOptions({ fontFamily: this.getInputEditorFontFamily() })));
 
 		this.onDidChangeContentHeight = Event.signal(Event.filter(this.inputEditor.onDidContentSizeChange, e => e.contentHeightChanged));
+
+		this.storageService = storageService;
 	}
 
 	getContentHeight(): number {
