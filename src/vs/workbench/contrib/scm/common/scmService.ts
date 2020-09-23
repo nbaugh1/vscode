@@ -24,6 +24,7 @@ class SCMInput implements ISCMInput {
 		}
 
 		this._value = value;
+		this.store(value);
 		this._onDidChange.fire(value);
 	}
 
@@ -74,15 +75,22 @@ class SCMInput implements ISCMInput {
 
 	constructor(readonly repository: ISCMRepository, @IStorageService memory: IStorageService) {
 		this.memory = memory;
+		this._value = this.storedValue() ?? '';
 	}
 	memory: IStorageService;
 
 	store(value: string) {
-		this.memory.store(this.repository.provider.id, value, StorageScope.WORKSPACE);
+		let root = this.repository.provider.rootUri;
+		if (root) {
+			this.memory.store(root.path, value, StorageScope.WORKSPACE);
+		}
 	}
 	storedValue() {
-		let stored = this.memory.get(this.repository.provider.id, StorageScope.WORKSPACE);
-		return stored;
+		let root = this.repository.provider.rootUri;
+		if (root) {
+			return this.memory.get(root.path, StorageScope.WORKSPACE) ?? '';
+		}
+		return '';
 	}
 }
 

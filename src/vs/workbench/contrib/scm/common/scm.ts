@@ -85,8 +85,6 @@ export interface IInputValidator {
 }
 
 export interface ISCMInput {
-	store(value: string): void;
-	storedValue(): string | undefined;
 	readonly repository: ISCMRepository;
 
 	value: string;
