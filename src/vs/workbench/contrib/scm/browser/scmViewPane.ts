@@ -1306,14 +1306,13 @@ class SCMInputWidget extends Disposable {
 		this.repositoryDisposables.add(onEnter(() => textModel.detectIndentation(opts.insertSpaces, opts.tabSize)));
 
 		// Keep model in sync with API
-
 		textModel.setValue(input.value);
 
 		this.repositoryDisposables.add(input.onDidChange(value => {
 			if (value === textModel.getValue()) { // circuit breaker
-				textModel.setValue(input.value);
 				return;
 			}
+			textModel.setValue(input.value);
 			this.inputEditor.setPosition(textModel.getFullModelRange().getEndPosition());
 		}));
 
