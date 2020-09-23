@@ -8,6 +8,7 @@ import { Event, Emitter } from 'vs/base/common/event';
 import { ISCMService, ISCMProvider, ISCMInput, ISCMRepository, IInputValidator } from './scm';
 import { ILogService } from 'vs/platform/log/common/log';
 import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
+import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 
 class SCMInput implements ISCMInput {
 
@@ -71,7 +72,18 @@ class SCMInput implements ISCMInput {
 	private readonly _onDidChangeValidateInput = new Emitter<void>();
 	readonly onDidChangeValidateInput: Event<void> = this._onDidChangeValidateInput.event;
 
-	constructor(readonly repository: ISCMRepository) { }
+	constructor(readonly repository: ISCMRepository, @IStorageService memory: IStorageService) {
+		this.memory = memory;
+	}
+	memory: IStorageService;
+
+	store(value: string) {
+		this.memory.store(this.repository.provider.id, value, StorageScope.WORKSPACE);
+	}
+	storedValue() {
+		let stored = this.memory.get(this.repository.provider.id, StorageScope.WORKSPACE);
+		return stored;
+	}
 }
 
 class SCMRepository implements ISCMRepository {
@@ -84,12 +96,15 @@ class SCMRepository implements ISCMRepository {
 	private readonly _onDidChangeSelection = new Emitter<boolean>();
 	readonly onDidChangeSelection: Event<boolean> = this._onDidChangeSelection.event;
 
-	readonly input: ISCMInput = new SCMInput(this);
+	readonly input: ISCMInput = new SCMInput(this, this.memory);
 
 	constructor(
 		public readonly provider: ISCMProvider,
-		private disposable: IDisposable
-	) { }
+		private disposable: IDisposable,
+		@IStorageService private memory: IStorageService
+	) {
+		this.memory = memory;
+	}
 
 	setSelected(selected: boolean): void {
 		if (this._selected === selected) {
@@ -128,9 +143,11 @@ export class SCMService implements ISCMService {
 
 	constructor(
 		@ILogService private readonly logService: ILogService,
-		@IContextKeyService contextKeyService: IContextKeyService
+		@IContextKeyService contextKeyService: IContextKeyService,
+		@IStorageService private memory: IStorageService
 	) {
 		this.providerCount = contextKeyService.createKey('scm.providerCount', 0);
+		this.memory = memory;
 	}
 
 	registerSCMProvider(provider: ISCMProvider): ISCMRepository {
@@ -161,7 +178,7 @@ export class SCMService implements ISCMService {
 			this.providerCount.set(this._repositories.length);
 		});
 
-		const repository = new SCMRepository(provider, disposable);
+		const repository = new SCMRepository(provider, disposable, this.memory);
 		const selectedDisposable = Event.map(Event.filter(repository.onDidChangeSelection, selected => selected), _ => repository)(this.select, this);
 
 		this._repositories.push(repository);

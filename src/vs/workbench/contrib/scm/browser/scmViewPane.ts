@@ -1307,7 +1307,7 @@ class SCMInputWidget extends Disposable {
 
 		// Keep model in sync with API
 		let textValue = input.value;
-		let storedValue = this.storageService.get(`scm.text`, StorageScope.WORKSPACE);
+		let storedValue = input.storedValue();
 
 		if (storedValue && textValue === '') {
 			textModel.setValue(storedValue);
@@ -1317,7 +1317,7 @@ class SCMInputWidget extends Disposable {
 
 		this.repositoryDisposables.add(input.onDidChange(value => {
 			if (value === textModel.getValue()) { // circuit breaker
-				this.storageService.store(`scm.text`, input.value, StorageScope.WORKSPACE);
+				input.store(value);
 				textModel.setValue(value);
 				return;
 			}
@@ -1391,7 +1391,6 @@ class SCMInputWidget extends Disposable {
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IContextViewService private readonly contextViewService: IContextViewService,
-		@IStorageService private storageService: IStorageService
 	) {
 		super();
 
@@ -1451,8 +1450,6 @@ class SCMInputWidget extends Disposable {
 		this._register(onInputFontFamilyChanged(() => this.inputEditor.updateOptions({ fontFamily: this.getInputEditorFontFamily() })));
 
 		this.onDidChangeContentHeight = Event.signal(Event.filter(this.inputEditor.onDidContentSizeChange, e => e.contentHeightChanged));
-
-		this.storageService = storageService;
 	}
 
 	getContentHeight(): number {
